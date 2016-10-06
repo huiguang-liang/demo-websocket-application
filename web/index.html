@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <title>Websocket Demo</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        <!--Import CSS Resources-->
+        <link rel="stylesheet" type="text/css" href="resources/css/main.css">
+    </head>
+    
+    <body onload="checkSocketStatus();">
+        <section class="header">
+            <span id="header-title">Websocket Demo Application</span>
+            <span id="header-subtitle">This is an demonstration of a websocket application</span>
+        </section>
+        
+        <section class="main-body">
+            
+            <div class="socket-status-message">
+                Current Socket Status: <span id="socket-status"></span>
+            </div>
+            
+            <div class="chat-input">
+                <div>Enter your chat message below</div>
+                <div><input type="text" id="messageinput"/>
+                <button type="button" onclick="sendText();" >Send</button></div>
+            </div>
+
+            <div>
+                <button type="button" onclick="openSocket();" >Open</button>
+                <button type="button" onclick="closeSocket();" >Close</button>
+            </div>
+            <!-- Server responses get written here -->
+            <div class="console" id="messages"></div>
+        </section>
+        
+        <!-- Script to utilize the WebSocket -->
+        <script type="text/javascript">
+            
+            var webSocket;
+            var messages = document.getElementById("messages");
+            var socket_status = document.getElementById("socket-status");
+            
+            /**
+             * Open the websocket
+             * @returns {undefined}
+             */
+            function openSocket() {
+                // Ensures only one connection is open at a time
+                if(webSocket !== undefined && webSocket.readyState !== WebSocket.CLOSED){
+                    writeResponse("WebSocket is already opened.");
+                    return;
+                }
+                
+                // Create a new instance of the websocket
+                webSocket = new WebSocket("ws://localhost:8080/DemoWebsocketApplication/echo");
+                
+                // Update the socket status
+                checkSocketStatus();
+                
+                // Bind the onopen handler
+                webSocket.onopen = function(event) {
+                    
+                    // Update the socket status
+                    checkSocketStatus();
+                    
+                    if(event.data === undefined)
+                        return;
+                    writeResponse(event.data);
+                };
+ 
+                // Bind the onmessage handler
+                webSocket.onmessage = function(event) {
+                    console.log("Message Received: " + event.data);
+                    writeResponse(event.data);
+                };
+                   
+                // Bind the onclose handler
+                webSocket.onclose = function(event) {
+                    // Update the socket status
+                    checkSocketStatus();
+                    messages.innerHTML += "<br/>" + "This connection has been closed by user.";
+                };
+            }
+            
+            /**
+             * Send the text out through the websocket
+             * @returns {undefined}
+             */
+            function sendText() {
+                var json = JSON.stringify({
+                    "type":"text",
+                    "data":document.getElementById("messageinput").value
+                });
+                webSocket.send(json);
+            }
+            
+            /**
+             * Close the websocket
+             * @returns {undefined}
+             */
+            function closeSocket() {
+                webSocket.close();
+            }
+            
+            /**
+             * Write the JSON response to this html
+             * @param {type} json
+             * @returns {undefined}
+             */
+            function writeResponse(json) {
+                var jsonResponse = JSON.parse(json);
+                var output;
+                
+                 // Determine the type of message recieved and handle accordingly
+                switch (jsonResponse.type) {
+                    case "image": {
+                        output = "<img src=\'" + jsonResponse.data + "\'/>";
+                        break;
+                    }
+                    case "text": {
+                        output = jsonResponse.data;
+                        break;
+                    }
+                }
+                
+                messages.innerHTML += "<br/>" + output;
+            }
+            
+            function checkSocketStatus() {
+                if (webSocket === undefined) {
+                    socket_status.innerHTML = "<span id=\"socket-undefined\">undefined</span>";
+                    return;
+                }
+                
+                if (webSocket.readyState === WebSocket.CLOSED) {
+                    socket_status.innerHTML = "<span id=\"socket-closed\">closed</span>";
+                    return;
+                }
+                
+                if (webSocket.readyState === WebSocket.CONNECTING) {
+                    socket_status.innerHTML = "<span id=\"socket-connecting\">connecting</span>";
+                    return;
+                }
+                
+                if (webSocket.readyState === WebSocket.CLOSING) {
+                    socket_status.innerHTML = "<span id=\"socket-closing\">closing</span>";
+                    return;
+                }
+                
+                if (webSocket.readyState === WebSocket.OPEN) {
+                    socket_status.innerHTML = "<span id=\"socket-open\">open</span>";
+                    return;
+                }
+            }
+            
+        </script>
+        
+    </body>
+</html>

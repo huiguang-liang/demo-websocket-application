@@ -1,0 +1,24 @@
+/*
+    Author     : Huiguang Liang
+*/
+
+/* font imports */
+@import 'https://fonts.googleapis.com/css?family=Montserrat:400,700';
+@import 'https://fonts.googleapis.com/css?family=Raleway:400,700';
+@import 'https://fonts.googleapis.com/css?family=Inconsolata:400,700&subset=latin-ext';
+@import "header.css";
+@import "main-body.css";
+
+html {
+    display: flex;
+    justify-content: center;
+}
+
+body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    max-width: 1024px;
+    min-width: 800px;
+}
