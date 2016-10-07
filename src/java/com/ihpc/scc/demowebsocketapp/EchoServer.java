@@ -1,14 +1,12 @@
 package com.ihpc.scc.demowebsocketapp;
 
-import java.io.IOException;
-import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.logging.Logger;
 import javax.json.Json;
 import javax.json.JsonObject;
-import javax.websocket.EncodeException;
+import javax.json.JsonObjectBuilder;
 import javax.websocket.OnClose;
 import javax.websocket.OnMessage;
 import javax.websocket.OnOpen;
@@ -46,6 +44,8 @@ public class EchoServer {
         Message message = new Message(Json.createObjectBuilder()
             .add("type", "text")
             .add("data", Helper.stringConcat("User ", session.getId(), " has connected."))
+            .add("sender", "server")
+            .add("received_time", System.currentTimeMillis())
             .build());
         sendMessageToAll(message);
     }
@@ -71,7 +71,25 @@ public class EchoServer {
         
         // Prepare the response
         JsonObject returnObject = jsonObject;
+        JsonObjectBuilder returnObjectBuilder = Json.createObjectBuilder();
+
+        // Since JsonObject is immutable, we have to do a hard-copy of content
+        returnObject.entrySet().stream().forEach((entry) -> {
+            returnObjectBuilder.add(entry.getKey(), entry.getValue());
+        });
         
+        // Then set the sender and received time by the server
+        returnObjectBuilder.add("sender", session.getId());
+        returnObjectBuilder.add("received_time", System.currentTimeMillis());
+        
+        // Build the return response
+        returnObject = returnObjectBuilder.build();
+        
+        // Send the return response
+        sendMessageToAll(returnObject);
+        
+        //returnObject.put("sender", session.getId());
+        /*
         try {
             String type = jsonObject.getString("type");
             if (type.equalsIgnoreCase("text")) {
@@ -90,6 +108,7 @@ public class EchoServer {
         catch (NullPointerException | ClassCastException e) {
             LOGGER.info(e.toString());
         }
+        */
     }
     
     /**
@@ -98,14 +117,17 @@ public class EchoServer {
      */
     @OnClose
     public void onClose(Session session){
+        
         SESSIONS.remove(session);
         LOGGER.info(Helper.stringConcat("Session ", session.getId(), " has ended."));
-        
         LOGGER.info(Helper.stringConcat("Open Sessions: ", String.valueOf(SESSIONS.size())));
+        
         // Alert everyone that a session has ended
         Message message = new Message(Json.createObjectBuilder()
             .add("type", "text")
             .add("data", Helper.stringConcat("User ", session.getId(), " has disconnected."))
+            .add("sender", "server")
+            .add("received_time", System.currentTimeMillis())
             .build());
         sendMessageToAll(message);
     }
@@ -114,7 +136,7 @@ public class EchoServer {
      * Set a message to all sessions
      * @param message 
      */
-    private void sendMessageToAll(Message message){
+    private void sendMessageToAll(Message message) {
         
         // Sanity check
         if (message == null) {
@@ -143,5 +165,18 @@ public class EchoServer {
                 //ex.printStackTrace();
             }
         }
+    }
+    
+    private void sendMessageToAll(JsonObject jsonObject) {
+        
+        // Sanity check
+        if (jsonObject == null) {
+            LOGGER.info("Trying to send a null object!");
+            return;
+        }
+        
+        // Wrap the jsonObject and send it
+        Message message = new Message(jsonObject);
+        sendMessageToAll(message);
     }
 }
